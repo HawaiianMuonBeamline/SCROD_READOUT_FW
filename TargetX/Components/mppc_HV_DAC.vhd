@@ -84,11 +84,11 @@ begin
   ) port map (
     clk      =>   globals.clk,
     rst      =>   globals.rst,
-    RX_m2s   =>  RX_REG_DATA_m2s,
-    RX_s2m   =>  RX_REG_DATA_s2m,
+    RX_m2s   => TX_REG_DATA_m2s ,
+    RX_s2m   =>  TX_REG_DATA_s2m,
 
-    TX_m2s  => TX_REG_DATA_m2s,
-    TX_s2m  => TX_REG_DATA_s2m
+    TX_m2s  => RX_REG_DATA_m2s,
+    TX_s2m  => RX_REG_DATA_s2m 
 
 
   );
@@ -105,7 +105,7 @@ begin
       
       if i_reg.address(15 downto 8) =  x"C0" then 
         if ready_to_send(TX) then
-			    buff(31 downto 16) :=i_reg.address;
+			   buff(31 downto 16) :=i_reg.address;
 		    	buff(15 downto 0) :=i_reg.value;
           send_data(TX, buff);
         end if;

@@ -62,6 +62,12 @@ architecture rtl of tx_triggerbitsz_eth is
   signal data_in  : tx_triggerbitsz_reader_rec := tx_triggerbitsz_reader_rec_null;
   signal data_out : tx_triggerbitsz_writer_rec := tx_triggerbitsz_writer_rec_null;
   
+  signal timestamp             : std_logic_vector(31 downto 0) := (others => '0');
+  signal timestamp_out_fine    : std_logic_vector(31 downto 0) := (others => '0');
+  signal current_timestamp_out : std_logic_vector(31 downto 0) := (others => '0');
+
+  signal timestamp_out_reset   :   std_logic_vector(31 downto 0) := (others => '0');
+  signal readout_counter  : std_logic_vector(31 downto 0) := (others => '0');
   
   signal tx_trigger_bit_asic_0 : std_logic_vector(4 downto 0) := (others => '0');
   signal tx_trigger_bit_asic_1 : std_logic_vector(4 downto 0) := (others => '0');
@@ -147,7 +153,12 @@ throttel : entity work.axiStreamThrottle
   target_tb_out => data_out.target_tb_out,
   read_out => data_out.read_out,
   busa_clr_in => data_out.busa_clr_in,
-  busa_clr_out => data_out.busa_clr_out
+  busa_clr_out => data_out.busa_clr_out,
+  timestamp_out => timestamp,
+  current_timestamp_out => current_timestamp_out,
+  timestamp_out_fine => timestamp_out_fine,
+  readout_counter => readout_counter,
+  timestamp_out_reset => timestamp_out_reset
 );
 -- </DUT>
 
@@ -178,12 +189,13 @@ throttel : entity work.axiStreamThrottle
 
     
     
-sl_to_slv(data_out.globals.clk, i_data_out(0) );
-sl_to_slv(data_out.globals.rst, i_data_out(1) );
-slv_to_slv(data_out.globals.reg.address, i_data_out(2) );
-slv_to_slv(data_out.globals.reg.value, i_data_out(3) );
+slv_to_slv(timestamp_out_reset, i_data_out(0) );
+slv_to_slv(readout_counter, i_data_out(1) );
+slv_to_slv(current_timestamp_out, i_data_out(2) );
+slv_to_slv(timestamp, i_data_out(3) );
+slv_to_slv(timestamp_out_fine, i_data_out(4) );
 
-slv_to_slv(tx_trigger_bit_asic_0_in , i_data_out(4) );
+--slv_to_slv(tx_trigger_bit_asic_0_in , i_data_out(4) );
 slv_to_slv(tx_trigger_bit_asic_1_in , i_data_out(5) );
 slv_to_slv(tx_trigger_bit_asic_2_in , i_data_out(6) );
 slv_to_slv(tx_trigger_bit_asic_3_in , i_data_out(7) );
@@ -203,7 +215,7 @@ slv_to_slv(tx_trigger_bit_asic_5 , i_data_out(18) );
 slv_to_slv(tx_trigger_bit_asic_6 , i_data_out(19) );
 slv_to_slv(tx_trigger_bit_asic_7 , i_data_out(20) );
 slv_to_slv(tx_trigger_bit_asic_8 , i_data_out(21) );
-sl_to_slv(data_out.read_out, i_data_out(22) );
+slv_to_slv(data_out.read_out, i_data_out(22) );
 sl_to_slv(data_out.busa_clr_in, i_data_out(23) );
 sl_to_slv(data_out.busa_clr_out, i_data_out(24) );
 
@@ -215,7 +227,7 @@ slv_to_sl(i_data(0), data_in.globals.clk);
 slv_to_sl(i_data(1), data_in.globals.rst);
 slv_to_slv(i_data(2), data_in.globals.reg.address);
 slv_to_slv(i_data(3), data_in.globals.reg.value);
-slv_to_sl(i_data(13), data_in.read_out);
+slv_to_slv(i_data(13), data_in.read_out);
 slv_to_sl(i_data(14), data_in.busa_clr_in);
 
 --</data_in_converter>
@@ -364,9 +376,12 @@ architecture rtl of tx_triggerbitsz_top is
   signal ethCoreMacAddr : MacAddrType := MAC_ADDR_DEFAULT_C;
      
   signal userRst     : sl;
-  signal ethCoreIpAddr  : IpAddrType  := IP_ADDR_DEFAULT_C;
-  constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");
-  constant udpPort        :  slv(15 downto 0):=  x"07D1" ;  -- 0x7d1
+  --constant ethCoreIpAddr  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14"); --192.168.1.20
+  constant ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   --192.168.2.20;
+  constant udpPort0        :  slv(15 downto 0):=  x"07D1" ;  -- 2001
+  --constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");  --192.168.1.33;
+  constant ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");    --192.168.2.33;
+  constant udpPort1        :  slv(15 downto 0):=  x"07D2" ;  -- 2002
 
      
   signal will_clk: std_logic := '0';
@@ -466,8 +481,8 @@ begin
       led             => open,
       -- Core settings in 
       macAddr         => ethCoreMacAddr,
-      ipAddrs         => (0 => ethCoreIpAddr, 1 => ethCoreIpAddr1),
-      udpPorts        => (0 => x"07D0",       1 => udpPort), --x7D0 = 2000,
+      ipAddrs         => (0 => ethCoreIpAddr0, 1 => ethCoreIpAddr1),
+      udpPorts        => (0 => udpPort0,       1 => udpPort1), --x7D0 = 2000,
       -- User clock inputs
       userClk         => ethClk125,
       userRstIn       => '0',

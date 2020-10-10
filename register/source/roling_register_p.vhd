@@ -85,6 +85,8 @@ package roling_register_p is
 
     trigger_mask   : integer;
     trigger_switch : integer;
+    trigger_maxCount : integer;
+    trigger_reset    : integer;
     MppcAdcAsicN   : integer;
     MppcAdcChanN : integer;
     MppcAdcData  : integer;
@@ -137,8 +139,11 @@ package roling_register_p is
     
     serielOutConverter_invert_bit_order => 170,
     serielOutConverter_notMask => 171,
-    trigger_mask => 180,
-    trigger_switch => 181,
+    trigger_mask => 4180,
+    trigger_switch => 4181,
+    trigger_maxCount => 4182,
+    trigger_reset    => 4183,
+    
     pedestal_channel => 190,
     pedestal_row   => 191,
     pedestal_column => 192,

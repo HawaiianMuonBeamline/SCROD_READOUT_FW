@@ -22,7 +22,7 @@ package tx_triggerbitsz_IO_pgk is
     globals : globals_t;  
     target_tb_in : tb_vec_type;  
     target_tb_out : tb_vec_type;  
-    read_out : std_logic;  
+    read_out : std_logic_vector(31 downto 0);
     busa_clr_in : std_logic;  
     busa_clr_out : std_logic;  
 
@@ -32,7 +32,7 @@ package tx_triggerbitsz_IO_pgk is
     globals => globals_t_null,
     target_tb_in => (others => (others => '0')),
     target_tb_out => (others => (others => '0')),
-    read_out => '0',
+    read_out =>  (others => '0'),
     busa_clr_in => '0',
     busa_clr_out => '0'
   );
@@ -42,7 +42,7 @@ package tx_triggerbitsz_IO_pgk is
   type tx_triggerbitsz_reader_rec is record
     globals : globals_t;  
     target_tb_in : tb_vec_type;  
-    read_out : std_logic;  
+    read_out : std_logic_vector(31 downto 0);  
     busa_clr_in : std_logic;  
 
   end record;
@@ -50,7 +50,7 @@ package tx_triggerbitsz_IO_pgk is
   constant tx_triggerbitsz_reader_rec_null : tx_triggerbitsz_reader_rec := ( 
     globals => globals_t_null,
     target_tb_in => (others => (others => '0')),
-    read_out => '0',
+    read_out => (others => '0'),
     busa_clr_in => '0'
   );
     
