@@ -12,3 +12,4 @@
 /run_test_cases.sh
 /startNewRun.sh
 /update_test_cases.sh
+*.root
