@@ -15,10 +15,12 @@ library UNISIM;
   use work.Imp_test_bench_pgk.all;
   use work.xgen_klm_scrod_bus.all;
   use work.klm_scint_globals.all;
+  use work.roling_register_p.all;
   use work.tdc_pkg.all;
 entity tx_triggerbitsz_eth is
   port (
     globals :  in globals_t := globals_t_null;
+    reg_out         : out registerT := registerT_null;  
     
     TxDataChannel : out  DWORD := (others => '0');
     TxDataValid   : out  sl := '0';
@@ -149,6 +151,7 @@ throttel : entity work.axiStreamThrottle
 -- <DUT>
     DUT :  entity work.tx_triggerbitsz port map(
   globals => globals,
+  reg_out => reg_out,
   target_tb_in => TARGET_TB,
   target_tb_out => data_out.target_tb_out,
   read_out => data_out.read_out,
@@ -267,7 +270,7 @@ library UNISIM;
   use work.xgen_klm_scrod_bus.all;
   use work.klm_scint_globals.all;
   use work.tdc_pkg.all;
-
+  use work.roling_register_p.all;
   
 entity tx_triggerbitsz_top is
    port (
@@ -400,7 +403,10 @@ architecture rtl of tx_triggerbitsz_top is
   signal userRxDataReadys   : slv(NUM_IP_G-1 downto 0);
   
   
-  signal  MppcAdcData              : std_logic_vector(11 downto 0) := (others => '0');
+  
+  signal reg_in         : registerT := registerT_null;   
+  signal mppv_hv_reg_out         : registerT := registerT_null;  
+  signal u_dut_reg_out         : registerT := registerT_null;  
     
 begin
   
@@ -408,6 +414,17 @@ begin
 
 
 
+reg_merger:   entity work.register_merger 
+    generic map(
+      Num_of_inputs => 2,
+      index_counter_max=>997 -- prime number
+    ) port map(
+      clk => globals.clk,
+
+      reg_in    => (0=>  mppv_hv_reg_out, 1 => u_dut_reg_out),
+      reg_out   => reg_in
+    );
+  
 
 -- <Connecting the BUS to the pseudo class>
   
@@ -515,7 +532,7 @@ begin
     RxDataLast   => userRxDataLasts(0),
     RxDataReady  => userRxDataReadys(0),
 
-    MppcAdcData    => MppcAdcData,
+    reg_in    => reg_in,
     globals => globals,
     TX_DAC_control_out => TX_DAC_control_out
   );
@@ -523,6 +540,7 @@ begin
  
     mppv_hv : entity work.mppc_HV_DAC port map(
         globals => globals,
+        reg_out         => mppv_hv_reg_out,
 
 
         -- MPPC HV DAC
@@ -541,7 +559,6 @@ begin
         --- MPPC ADC
         SCL_MON             =>  SCL_MON,
         SDA_MON             => SDA_MON,                  
-        MppcAdcData         => MppcAdcData,
 
         ---
 
@@ -558,6 +575,7 @@ begin
   u_dut  : entity work.tx_triggerbitsz_eth
     port map (
       globals => globals,
+      reg_out => u_dut_reg_out,
       -- Incoming data
       RxDataChannel => userRxDataChannels(1),
       rxDataValid   => userRxDataValids(1),

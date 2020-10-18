@@ -53,7 +53,7 @@ begin
   integer_to_slv(csv_r_data(11), data.target_tb_in(8));
   integer_to_slv(csv_r_data(12), data.target_tb_in(9));
   data.target_tb_in(10) <= (others =>'0');
-  integer_to_sl(csv_r_data(13), data.read_out);
+  integer_to_slv(csv_r_data(13), data.read_out);
   integer_to_sl(csv_r_data(14), data.busa_clr_in);
 
 
@@ -119,7 +119,7 @@ begin
   slv_to_integer(data.target_tb_out(7), data_int(19) );
   slv_to_integer(data.target_tb_out(8), data_int(20) );
   slv_to_integer(data.target_tb_out(9), data_int(21) );
-  sl_to_integer(data.read_out, data_int(22) );
+  slv_to_integer(data.read_out, data_int(22) );
   sl_to_integer(data.busa_clr_in, data_int(23) );
   sl_to_integer(data.busa_clr_out, data_int(24) );
 

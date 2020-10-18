@@ -19,6 +19,8 @@ library unisim;
 entity TX_TriggerBitSZ is
   port (
     globals : globals_t   := globals_t_null;
+    reg_out         : out registerT := registerT_null;  
+    
     TARGET_TB_in          : in tb_vec_type;
     TARGET_TB_out         : out tb_vec_type;
     read_out              :  in std_logic_vector(31 downto 0) := (others => '0');
@@ -36,12 +38,14 @@ entity TX_TriggerBitSZ is
 end entity;
 
 architecture rtl of TX_TriggerBitSZ is
+  
+    signal i_reg_out         : registerT_a(TARGET_TB_in'range)  := (others=>  registerT_null);  
     signal   i_reg           :  registerT:= registerT_null;
     signal trigger_mask1         : std_logic_vector(15 downto 0) := x"0008";
     
     signal trigger_switch    : std_logic_vector(15 downto 0) := x"0001";
     
-    type optional_trigger_bit_t_a is array (natural range <>) of optional_trigger_bit_t;
+    
 
   signal edgedetection_tb_out :   optional_trigger_bit_t_a(TARGET_TB_in'range) :=(others =>  optional_trigger_bit_t_null);
   signal RX_m2s : axisStream_32_m2s := axisStream_32_m2s_null;
@@ -289,9 +293,31 @@ begin
 
     TARGET_TB_out(I)(5 downto 1) <=  TARGET_TB_out_out_buffer(I) when trigger_switch(0) = '1' else TARGET_TB_in(I)(5 downto 1);
 
+    
+    
+   trig_scaler :  entity work.trigger_bit_scaler 
+     generic map(
+        asic_number => I
+      ) port map(
+        globals => globals,
+        reg_out    => i_reg_out(i),
+        edgedetection_tb_out => edgedetection_tb_out(I)
+      );
+    
   end generate GEN_REG;
   
+  reg_merger:   entity work.register_merger 
+    generic map(
+      Num_of_inputs => i_reg_out'length,
+      index_counter_max=>991 -- prime number
+    ) port map(
+      clk => globals.clk,
 
+      reg_in   =>i_reg_out,
+      reg_out => reg_out
+    );
+  --reg_out <= i_reg_out(4);
+  
   process(globals.clk) is 
 
   begin 
@@ -300,7 +326,6 @@ begin
 
       reset_slv <= (others => '0');
       read_data_s( i_reg,  trigger_mask1,     register_val.trigger_mask     );
-      read_data_s( i_reg,  trigger_switch,    register_val.trigger_switch     );
       read_data_s( i_reg,  trigger_switch,    register_val.trigger_switch     );
       read_data_s( i_reg,  counter_max_slv,   register_val.trigger_maxCount     );
       read_data_s( i_reg,  reset_slv,         register_val.trigger_maxCount     );

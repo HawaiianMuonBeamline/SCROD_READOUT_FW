@@ -11,8 +11,8 @@ library IEEE;
 entity mppc_HV_DAC is
   port (
     globals : globals_t := globals_t_null;
-    
-    
+    reg_out         : out registerT := registerT_null;  
+
     -- MPPC HV DAC
     BUSA_SCK_DAC           : out std_logic;
     BUSA_DIN_DAC           : out std_logic;
@@ -25,20 +25,20 @@ entity mppc_HV_DAC is
 
     TDC_AMUX_S               : out std_logic_vector(3 downto 0); -- what the difference between these two?
     TOP_AMUX_S               : out std_logic_vector(3 downto 0); -- TODO: check schematic
-    
+
     --- MPPC ADC
     SCL_MON                  : out STD_LOGIC;
     SDA_MON                  : inout STD_LOGIC;
-    MppcAdcData              : out std_logic_vector(11 downto 0);
-    
+
+
     ---
 
     --TMP                      : out std_logic_vector(31 downto 0);
 
     TDC_DONE                 : in STD_LOGIC_VECTOR(9 downto 0); -- move to readout signals
     TDC_MON_TIMING           : in STD_LOGIC_VECTOR(9 downto 0)  -- add the ref to the programming of the TX chip
-    
-    
+
+
   );
 end entity;
 
@@ -48,36 +48,36 @@ architecture rtl of mppc_HV_DAC is
   signal i_hv_sck_dac         : std_logic := '0';
   signal i_hv_din_dac         : std_logic := '0';
   signal i_tdc_cs_dac         : std_logic_vector(9 downto 0) := (others => '0');
-  
+
   signal i_DAC_NUMBER   : STD_LOGIC_VECTOR(3 downto 0);
   signal i_DAC_ADDR     : STD_LOGIC_VECTOR(3 downto 0);
   signal i_DAC_VALUE    : STD_LOGIC_VECTOR(7 downto 0);
-  
+
   signal i_WRITE_STROBE : STD_LOGIC;
   signal i_BUSY         : std_logic;
   signal i_dbg1         : std_logic_vector(15 downto 0);
   signal i_dbg2         : std_logic_vector(15 downto 0);
-  
+
   signal i_sda_mon : std_logic;
   signal i_scl_mon : std_logic;
-  
+
   signal MppcAdcAsicN               : std_logic_vector(3 downto 0); -- what the difference between these two?
   signal MppcAdcChanN               : std_logic_vector(3 downto 0); -- TODO: check schematic
   signal ADCReset :std_logic;
   signal ADCdebug : std_logic_vector(15 downto 0) := (others => '0');
   signal RunADC : std_logic;
   signal  i_MppcAdcData     :std_logic_vector(11 downto 0);
-  
+
   signal TX_REG_DATA_m2s     : axisStream_32_m2s := axisStream_32_m2s_null;
   signal TX_REG_DATA_s2m     : axisStream_32_s2m := axisStream_32_s2m_null;
-  
+
   signal RX_REG_DATA_m2s     : axisStream_32_m2s := axisStream_32_m2s_null;
   signal RX_REG_DATA_s2m     : axisStream_32_s2m := axisStream_32_s2m_null;
-  
+
   type state_t is (idle, sending, waiting);
   signal i_state : state_t := idle;
 begin
-  
+
   reg_fifo : entity work.fifo_cc_axi_32 generic map (
     DATA_WIDTH => 32,
     DEPTH => 8
@@ -92,25 +92,25 @@ begin
 
 
   );
-  
+
   process(globals.clk) is 
     variable TX : axisStream_32_master:= axisStream_32_master_null;
     variable counter: std_logic_vector(15 downto 0) := (others => '0');
-	 variable buff : std_logic_vector(31 downto 0) := (others => '0');
+    variable buff : std_logic_vector(31 downto 0) := (others => '0');
   begin 
     if rising_edge(globals.clk) then
       pull(TX, TX_REG_DATA_s2m);
       counter := counter +1;
       RunADC <= '0';
-      
+
       if i_reg.address(15 downto 8) =  x"C0" then 
         if ready_to_send(TX) then
-			   buff(31 downto 16) :=i_reg.address;
+			    buff(31 downto 16) :=i_reg.address;
 		    	buff(15 downto 0) :=i_reg.value;
           send_data(TX, buff);
         end if;
       end if;
-      
+
       read_data_s( i_reg,  MppcAdcAsicN   , register_val.MppcAdcAsicN );
       read_data_s( i_reg,  MppcAdcChanN   , register_val.MppcAdcChanN );
       read_data_s( i_reg,  ADCdebug ,       register_val.ADCdebug);
@@ -118,11 +118,11 @@ begin
         RunADC <= '1';
         counter := (others => '0');
       end if;
-      
+
       push(TX, TX_REG_DATA_m2s);
     end if;
   end process;
-  
+
 
   process(globals.clk) is 
     variable rx : axisStream_32_slave:= axisStream_32_slave_null;
@@ -217,7 +217,8 @@ begin
       ADCOutput   => i_MppcAdcData  
 
     );
-  MppcAdcData <= i_MppcAdcData;
+  reg_out.value <= "0000"&i_MppcAdcData;
+  reg_out.address <= x"aba1";
   SDA_MON <= i_sda_mon ;
   SCL_MON <= i_scl_mon;
   ---------------------------------------------------------------
@@ -230,5 +231,5 @@ begin
     registersOut  => i_reg
   );
 
-  
+
 end architecture;

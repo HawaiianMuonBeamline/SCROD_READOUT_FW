@@ -13,7 +13,7 @@ package optional_trigger_bits_p is
    trigger_bit => (others => '0'),
    valid => '0'
  );
- 
+ type optional_trigger_bit_t_a is array (natural range <>) of optional_trigger_bit_t;
  procedure reset(signal self:out optional_trigger_bit_t);
  procedure set_data(signal self:out optional_trigger_bit_t; triggerBits : in trigger_bits_t);
  function is_valid(self: optional_trigger_bit_t) return boolean;

@@ -35,7 +35,7 @@ entity roling_register_m_eth is
     RxDataReady   : out  sl := '0';
 
      
-    MppcAdcData              : std_logic_vector(11 downto 0) := (others => '0');
+    reg_in         : in registerT := registerT_null;   
 
     globals :  out globals_t := globals_t_null;
     TX_DAC_control_out : out  TX_DAC_control_a( 0 to NumberOfACICs -1) :=  (others => TX_DAC_control_null)
@@ -136,13 +136,10 @@ begin
 
   -- <DUT>
   DUT :  entity work.roling_register 
-    generic map (
-      SizeOfArray => 2048
-    )
     port map(
     clk =>clk,
   --  slowClk  => slowClk,
-    MppcAdcData    => MppcAdcData,
+    reg_in    => reg_in,
     registerin_m2s =>  data_out.registerin_m2s,
     registerin_s2m =>data_out.registerin_s2m,
     globals  => i_globals --data_out.registersout

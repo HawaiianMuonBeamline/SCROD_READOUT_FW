@@ -15,13 +15,15 @@ library UNISIM;
 
 entity roling_register is
   generic(
-    SizeOfArray : integer :=250
+    ADDR     : integer := 10
    
   );
   port (
     clk            : in   std_logic;
- --   slowClk         : in STD_LOGIC;
-    MppcAdcData    : IN std_logic_vector(11 downto 0) := (others => '0');
+
+    reg_in         : in registerT := registerT_null;   
+    
+    
     registerIN_m2s  : in axisStream_registert_m2s := axisStream_registert_m2s_null;
     registerIN_s2m  : out axisStream_registert_s2m := axisStream_registert_s2m_null;
 
@@ -32,6 +34,15 @@ end roling_register;
 architecture rtl of roling_register is
 
 
+  procedure increment_until_rollover(signal reg_array_counter: inout integer; reg_array_length : in integer) is 
+  begin
+    reg_array_counter <= reg_array_counter +1;
+    if reg_array_counter >= reg_array_length - 1 then
+      reg_array_counter  <= 0;
+    end if;
+  end procedure;
+  
+  signal i_regbuf_in : registerT := registerT_null;  
   signal i_regBuffer : registerT := registerT_null;
   signal i_regBuffer1 : registerT := registerT_null;
 
@@ -39,6 +50,14 @@ architecture rtl of roling_register is
  signal  TX_m2s  : axisStream_32_m2s := axisStream_32_m2s_null;
  signal  TX_s2m  : axisStream_32_s2m := axisStream_32_s2m_null;
  signal reset : std_logic := '0';
+ 
+ constant data : integer := 32;
+ signal wea    : std_logic;
+ signal addra  : std_logic_vector(ADDR-1 downto 0);
+ signal dina   : std_logic_vector(DATA-1 downto 0);
+ -- Port B
+ signal addrb  : std_logic_vector(ADDR-1 downto 0);
+ signal doutb  : std_logic_vector(DATA-1 downto 0);
 begin
 
 
@@ -58,6 +77,19 @@ begin
     TX_s2m  => TX_s2m
   );
 
+  ram : entity work.bram_sdp_cc generic map(
+    DATA    => data,
+    ADDR    => ADDR
+  ) port map(
+    -- Port A
+    clk   =>clk,
+    wea    => wea,   
+    addra  => addra, 
+    dina   => dina , 
+  -- port B
+    addrb  => addrb ,
+    doutb  => doutb  
+  );
   process(clk) is
     variable reg_rx : axisStream_32_slave:= axisStream_32_slave_null;
     variable DataBuffer : STD_LOGIC_VECTOR(31 downto 0) := (others =>'0');
@@ -71,11 +103,14 @@ begin
     if rising_edge(clk) then
       pull(reg_rx, TX_m2s);
       i_regBuffer <= registerT_null;
-      ------------------------------------------
-      ----Input---------------------------------
-      ------------------------------------------
-      i_regBuffer.address <= std_logic_vector(to_unsigned( register_val.MppcAdcData, i_regBuffer.address'length));
-      i_regBuffer.value(MppcAdcData'range) <= MppcAdcData;
+
+      wea <= '1';
+      addra <= i_regbuf_in.address(addra'range);   
+      dina <= i_regbuf_in.address & i_regbuf_in.value; 
+      addrb <= addrb +1;
+      i_regBuffer.address <= doutb(31 downto 16);
+      i_regBuffer.value   <= doutb(15 downto 0);
+      
 
       if isReceivingData(reg_rx) then
         read_data(reg_rx,DataBuffer);
@@ -95,11 +130,8 @@ begin
 
 
       end if;
-      
+     
 
-     --------------------------------------------
-      ----end Input------------------------------
-      -------------------------------------------
       
       push(reg_rx, TX_s2m);
     end if;
@@ -127,4 +159,13 @@ begin
   globals.clk <= clk;
   globals.rst  <= reset;
   
+
+  reg_buffer1 : entity work.registerBuffer generic map (
+    Depth =>  10
+  ) port map (
+
+    clk => clk,
+    registersIn   => reg_in,
+    registersOut  => i_regbuf_in
+  );
 end rtl;
