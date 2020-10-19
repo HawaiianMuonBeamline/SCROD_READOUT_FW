@@ -55,15 +55,14 @@ architecture rtl of mppc_HV_DAC is
 
   signal i_WRITE_STROBE : STD_LOGIC;
   signal i_BUSY         : std_logic;
-  signal i_dbg1         : std_logic_vector(15 downto 0);
-  signal i_dbg2         : std_logic_vector(15 downto 0);
+
 
   signal i_sda_mon : std_logic;
   signal i_scl_mon : std_logic;
 
   signal MppcAdcAsicN               : std_logic_vector(3 downto 0); -- what the difference between these two?
   signal MppcAdcChanN               : std_logic_vector(3 downto 0); -- TODO: check schematic
-  signal ADCReset :std_logic;
+
   signal ADCdebug : std_logic_vector(15 downto 0) := (others => '0');
   signal RunADC : std_logic;
   signal  i_MppcAdcData     :std_logic_vector(11 downto 0);
@@ -78,20 +77,7 @@ architecture rtl of mppc_HV_DAC is
   signal i_state : state_t := idle;
 begin
 
-  reg_fifo : entity work.fifo_cc_axi_32 generic map (
-    DATA_WIDTH => 32,
-    DEPTH => 8
-  ) port map (
-    clk      =>   globals.clk,
-    rst      =>   globals.rst,
-    RX_m2s   => TX_REG_DATA_m2s ,
-    RX_s2m   =>  TX_REG_DATA_s2m,
 
-    TX_m2s  => RX_REG_DATA_m2s,
-    TX_s2m  => RX_REG_DATA_s2m 
-
-
-  );
 
   process(globals.clk) is 
     variable TX : axisStream_32_master:= axisStream_32_master_null;
@@ -123,7 +109,21 @@ begin
     end if;
   end process;
 
+  reg_fifo : entity work.fifo_cc_axi_32 generic map (
+    DATA_WIDTH => 32,
+    DEPTH => 8
+  ) port map (
+    clk      =>   globals.clk,
+    rst      =>   globals.rst,
+    RX_m2s   => TX_REG_DATA_m2s ,
+    RX_s2m   =>  TX_REG_DATA_s2m,
 
+    TX_m2s  => RX_REG_DATA_m2s,
+    TX_s2m  => RX_REG_DATA_s2m 
+
+
+  );
+  
   process(globals.clk) is 
     variable rx : axisStream_32_slave:= axisStream_32_slave_null;
     variable buff : STD_LOGIC_VECTOR(31 downto 0) := (others =>'0');
@@ -177,8 +177,8 @@ begin
       DIN_DAC       => i_hv_din_dac,
       CS_DAC        => i_tdc_cs_dac,
 
-      dbg1           => i_dbg1,
-      dbg2           => i_dbg2
+      dbg1           => open,
+      dbg2           => open
     );
 
 
@@ -206,7 +206,7 @@ begin
   mpc_adc_i: entity work.Module_ADC_MCP3221_I2C_new
     port map(
       clock         => globals.clk, -- i_CLOCK_MPPC_DAC,--i_CLOCK_FPGA_LOGIC,
-      reset       => ADCReset,
+      reset       => globals.rst,
 
       debugmode    => ADCdebug,
 

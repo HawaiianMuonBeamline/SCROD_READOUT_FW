@@ -73,12 +73,7 @@ begin
          i_dac_addr   <= DAC_ADDR;
          i_dac_value  <= DAC_VALUE;
 
-         --i_write_strobe <= write_strobe;
 
-         --i_write_i    <= i_write_strobe;
-         --if i_write_strobe = '1' then
-            --i_dbg        <= i_dbg + 1;
-         --end if;
 		end if;
 	end process;
 

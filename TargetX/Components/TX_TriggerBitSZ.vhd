@@ -328,7 +328,7 @@ begin
       read_data_s( i_reg,  trigger_mask1,     register_val.trigger_mask     );
       read_data_s( i_reg,  trigger_switch,    register_val.trigger_switch     );
       read_data_s( i_reg,  counter_max_slv,   register_val.trigger_maxCount     );
-      read_data_s( i_reg,  reset_slv,         register_val.trigger_maxCount     );
+      read_data_s( i_reg,  reset_slv,         register_val.trigger_reset     );
 
       
       reset_sl    <=    reset_slv(0); 
