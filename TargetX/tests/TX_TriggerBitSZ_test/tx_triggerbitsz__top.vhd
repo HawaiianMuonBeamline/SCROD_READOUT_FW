@@ -271,6 +271,7 @@ library UNISIM;
   use work.klm_scint_globals.all;
   use work.tdc_pkg.all;
   use work.roling_register_p.all;
+use ieee.std_logic_unsigned.all;
   
 entity tx_triggerbitsz_top is
    port (
@@ -380,10 +381,10 @@ architecture rtl of tx_triggerbitsz_top is
      
   signal userRst     : sl;
   --constant ethCoreIpAddr  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14"); --192.168.1.20
-  constant ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   --192.168.2.20;
+  SIGNAL ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   --192.168.2.20;
   constant udpPort0        :  slv(15 downto 0):=  x"07D1" ;  -- 2001
   --constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");  --192.168.1.33;
-  constant ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");    --192.168.2.33;
+  signal ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");    --192.168.2.33;
   constant udpPort1        :  slv(15 downto 0):=  x"07D2" ;  -- 2002
 
      
@@ -407,7 +408,13 @@ architecture rtl of tx_triggerbitsz_top is
   signal reg_in         : registerT := registerT_null;   
   signal mppv_hv_reg_out         : registerT := registerT_null;  
   signal u_dut_reg_out         : registerT := registerT_null;  
-    
+  
+  
+  signal startup_Counter : slv(15 downto 0) := (others => '0');
+  signal userRstIn : STD_LOGIC := '0';
+  signal DNA_Buffer : Word16Array( 0 to 3) := (others => (others =>'0'));
+  constant  DNA_SCROD_1 : Word16Array( 0 to 3) := (3 => x"013f" , 2 => x"DDFF", 1 => x"B5C7" , 0 => x"6E5A"); -- SCROD1
+  --constant  DNA_SCROD_2 : Word16Array( 0 to 3) := (3 => x"0131" , 2 => x"469A", 1 => x"337E" , 0 => x"6746"); --SCROD2
 begin
   
   U_IBUFGDS : IBUFGDS port map ( I => fabClkP, IB => fabClkN, O => fabClk);
@@ -421,7 +428,7 @@ reg_merger:   entity work.register_merger
     ) port map(
       clk => globals.clk,
 
-      reg_in    => (0=>  mppv_hv_reg_out, 1 => u_dut_reg_out),
+      reg_in    => (0=>  mppv_hv_reg_out, 1 => u_dut_reg_out ),
       reg_out   => reg_in
     );
   
@@ -502,7 +509,7 @@ reg_merger:   entity work.register_merger
       udpPorts        => (0 => udpPort0,       1 => udpPort1), --x7D0 = 2000,
       -- User clock inputs
       userClk         => ethClk125,
-      userRstIn       => '0',
+      userRstIn       => userRstIn,
       userRstOut      => userRst,
       -- User data interfaces
       userTxData      => userTxDataChannels,
@@ -570,7 +577,37 @@ reg_merger:   entity work.register_merger
 
       );
     
+
+    dna : entity work.DeviceDNA_handler port map( 
+        globals   => globals,
+        dnaOut  => open,
+        reg_out   => open,
+        Data_buffer_out => DNA_Buffer
+      );
+    
+   process(globals.clk) is 
+   begin 
+     if rising_edge(globals.clk) then
+       userRstIn <= '0';
+       if startup_Counter < 60000 then 
+         startup_Counter <= startup_Counter +1;
+       elsif  startup_Counter < 60005 then
+         startup_Counter <= startup_Counter +1;
+         userRstIn <= '1';
+       else 
+          
+       end if;
+       if DNA_SCROD_1(0) = DNA_Buffer(0) and  DNA_SCROD_1(1) = DNA_Buffer(1) and DNA_SCROD_1(2) = DNA_Buffer(2) and DNA_SCROD_1(3) = DNA_Buffer(3) then 
+         --ethCoreIpAddr0  <= (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14");   
+         --ethCoreIpAddr1  <= (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");   
+       else
+         --ethCoreIpAddr0  <= (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   
+         --ethCoreIpAddr1  <= (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");      
+       end if;
+     end if;
+   end process;
   
+
   
   u_dut  : entity work.tx_triggerbitsz_eth
     port map (

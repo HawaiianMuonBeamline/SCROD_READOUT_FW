@@ -100,6 +100,11 @@ package roling_register_p is
     trigger_switch : integer;
     trigger_maxCount : integer;
     trigger_reset    : integer;
+    trigger_ASIC    : integer;
+    trigger_ASIC_mask : integer;
+    trigger_time_window : integer;
+    no_trigger    : integer;
+    
     MppcAdcAsicN   : integer;
     MppcAdcChanN : integer;
     MppcAdcData  : integer;
@@ -157,7 +162,10 @@ package roling_register_p is
     trigger_switch => 4181,
     trigger_maxCount => 4182,
     trigger_reset    => 4183,
-
+    trigger_ASIC     => 4184,
+    trigger_ASIC_mask  =>  4185,
+    trigger_time_window => 4186,
+    no_trigger           =>  4187,
     pedestal_channel => 190,
     pedestal_row   => 191,
     pedestal_column => 192,

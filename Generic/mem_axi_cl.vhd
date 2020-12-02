@@ -21,8 +21,8 @@ entity fifo_cc_axi_32 is
     RX_s2m  : out  axisStream_32_s2m := axisStream_32_s2m_null;
 
     TX_m2s  : out   axisStream_32_m2s := axisStream_32_m2s_null;
-    TX_s2m   : in  axisStream_32_s2m   := axisStream_32_s2m_null
-
+    TX_s2m   : in  axisStream_32_s2m   := axisStream_32_s2m_null;
+    counter : out std_logic_vector(DEPTH-1 downto 0) := (others => '0')
 
   );
 end entity;
@@ -53,6 +53,7 @@ fifo_cc : entity work.fifo_cc_axi generic map (
   TX_Data    => TX_Data, 
   TX_Valid   => TX_m2s.valid,
   TX_Last    => TX_m2s.last,
-  TX_Ready  => TX_s2m.ready 
+  TX_Ready  => TX_s2m.ready ,
+  counter => counter
 );
 end rtl;

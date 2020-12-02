@@ -44,7 +44,7 @@ begin
       if scaler_counter >= scaler_counter_max then
         scaller_buffer_out <= scaller_buffer;
         scaller_buffer <= (others => (others => '0'));
-		  scaler_counter <= (others => '0');
+		    scaler_counter <= (others => '0');
       end if;
       
       

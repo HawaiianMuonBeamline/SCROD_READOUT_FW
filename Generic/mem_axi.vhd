@@ -23,7 +23,9 @@ entity fifo_cc_axi is
     TX_Data   : out std_logic_vector(DATA_WIDTH-1 downto 0):= (others => '0');
     TX_Valid  : out std_logic := '0'; 
     TX_Last   : out std_logic := '0'; 
-    TX_Ready  : in  std_logic := '0' 
+    TX_Ready  : in  std_logic := '0' ;
+    counter : out std_logic_vector(DEPTH-1 downto 0) := (others => '0')
+    
   );
 end fifo_cc_axi;
 
@@ -48,7 +50,8 @@ begin
     ren   => ren,
     dout  => dout,
     full  => full,
-    empty => empty
+    empty => empty,
+     counter => counter
   );
   din      <= RX_Data & RX_Last;
   wen      <= RX_Valid when full = '0' else '0';

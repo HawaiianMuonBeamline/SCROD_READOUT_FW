@@ -21,14 +21,12 @@ architecture rtl of register_merger is
   signal index : integer := 0;
   signal index_counter : integer := 0;
 begin
-
-
+  
+  reg_out <= reg_in(index);
+  
   process(clk) is 
   begin 
     if rising_edge(clk) then 
-      reg_out <= reg_in(index);
-      
-      
       index_counter <= index_counter +1;
       if index_counter >= index_counter_max then 
         index_counter <= 0;
@@ -37,8 +35,6 @@ begin
           index <= 0;
         end if;
       end if;
-      
-      
     end if;
   end process;
 
