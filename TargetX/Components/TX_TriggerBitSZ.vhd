@@ -187,7 +187,7 @@ begin
   buffer_fifo: for I in RX_m2s'range  generate
     b_fifo : entity work.fifo_cc_axi_32 generic map (
       DATA_WIDTH => 32,
-      DEPTH => 3
+      DEPTH => 8
     ) port map (
       clk      => globals.clk,
       rst      => reset_sl,

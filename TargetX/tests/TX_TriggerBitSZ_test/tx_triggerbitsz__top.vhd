@@ -381,10 +381,10 @@ architecture rtl of tx_triggerbitsz_top is
      
   signal userRst     : sl;
   --constant ethCoreIpAddr  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14"); --192.168.1.20
-  SIGNAL ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   --192.168.2.20;
+  SIGNAL ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14");   --192.168.2.20;
   constant udpPort0        :  slv(15 downto 0):=  x"07D1" ;  -- 2001
   --constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");  --192.168.1.33;
-  signal ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");    --192.168.2.33;
+  signal ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");    --192.168.2.33;
   constant udpPort1        :  slv(15 downto 0):=  x"07D2" ;  -- 2002
 
      
