@@ -22,16 +22,18 @@ package roling_register_p is
     header : STD_LOGIC_VECTOR(3 downto 0);
     asic   : STD_LOGIC_VECTOR(3 downto 0);
     channel: STD_LOGIC_VECTOR(4 downto 0);
+    Lower_higher: STD_LOGIC;
   end record;
   constant reg_addr_null : reg_addr := (
     header => (others => '0'),
     asic => (others => '0'),
-    channel  => (others => '0')
+    channel  => (others => '0'),
+    Lower_higher => '0'
   );
   
   -- procedure read_data(self : in registerT; value :out  STD_LOGIC_VECTOR; addr :in integer);
 
-  function reg_addr_ctr(header : STD_LOGIC_VECTOR; asic   : STD_LOGIC_VECTOR; channel: STD_LOGIC_VECTOR) return reg_addr;
+  function reg_addr_ctr(header : STD_LOGIC_VECTOR; asic   : STD_LOGIC_VECTOR; channel: STD_LOGIC_VECTOR;  Lower_higher:STD_LOGIC) return reg_addr;
   function reg_addr_to_slv(data_in : reg_addr) return STD_LOGIC_VECTOR;
   function slv_to_reg_addr(dataIn:STD_LOGIC_VECTOR) return reg_addr;
   procedure read_data_s(self : in registerT; signal value :out  STD_LOGIC_VECTOR ; addr :in integer);
@@ -188,12 +190,13 @@ end package;
 
 package body roling_register_p is
   
-  function reg_addr_ctr(header : STD_LOGIC_VECTOR; asic   : STD_LOGIC_VECTOR; channel: STD_LOGIC_VECTOR) return reg_addr is 
+  function reg_addr_ctr(header : STD_LOGIC_VECTOR; asic   : STD_LOGIC_VECTOR; channel: STD_LOGIC_VECTOR; Lower_higher:STD_LOGIC) return reg_addr is 
     variable ret : reg_addr :=reg_addr_null;
   begin 
     ret.header := header(ret.header'range);
     ret.asic := asic(ret.asic'range);
-    ret.channel := channel(ret.channel'range);
+    ret.channel := channel;
+    ret.Lower_higher := Lower_higher;
     return ret;
   end function;
 
@@ -210,6 +213,7 @@ function reg_addr_to_slv(data_in : reg_addr) return STD_LOGIC_VECTOR is
     variable ret : STD_LOGIC_VECTOR(15 downto 0)  := (others => '0');
   begin
     ret(15                                               downto 12)                      := data_in.header ;
+    ret(data_in.asic'length + data_in.channel'length)                                    := data_in.Lower_higher;
     ret(data_in.asic'length + data_in.channel'length - 1 downto data_in.channel'length ) := data_in.asic ;
     ret(data_in.channel'length - 1                       downto 0 )                      := data_in.channel;
   return ret;  

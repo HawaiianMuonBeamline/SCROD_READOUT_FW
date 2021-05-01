@@ -19,14 +19,19 @@ entity trigger_bit_scaler is
 end entity;
 
 architecture rtl of trigger_bit_scaler is
-  type scaler_buffer_t is array (natural range <>) of STD_LOGIC_VECTOR(15 downto 0);
+  type scaler_buffer_t is array (natural range <>) of STD_LOGIC_VECTOR(31 downto 0);
   signal scaller_buffer : scaler_buffer_t(0 to 32) := (others => (others => '0'));
   signal scaller_buffer_out : scaler_buffer_t(0 to 32) := (others => (others => '0'));
   
-  signal scaler_index : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+  signal scaler_index : STD_LOGIC_VECTOR(5 downto 0) := (others => '0');
+  signal buffer_sclarer_out_high : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
   
-  signal scaler_counter : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
-  signal scaler_counter_max : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
+  
+  signal scaler_counter_low : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
+  constant scaler_counter_low_max : STD_LOGIC_VECTOR(15 downto 0):= (others => '1');
+  signal scaler_counter_high : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
+  
+  signal scaler_counter_high_max : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
   constant header : STD_LOGIC_VECTOR(3 downto 0) := x"f";
   signal   i_reg           :  registerT:= registerT_null;
 begin
@@ -35,30 +40,40 @@ begin
     variable index : integer := 0;
   begin
     if rising_edge(globals.clk) then 
-      scaler_counter <= scaler_counter +1;
+      scaler_counter_low <= scaler_counter_low +1;
       if is_valid(edgedetection_tb_out) then 
         index := conv_integer(get_data(edgedetection_tb_out));
         scaller_buffer(index) <= scaller_buffer(index)  +1;
       end if;
-      
-      if scaler_counter >= scaler_counter_max then
-        scaller_buffer_out <= scaller_buffer;
-        scaller_buffer <= (others => (others => '0'));
-		    scaler_counter <= (others => '0');
+      if scaler_counter_low >= scaler_counter_low_max then
+        scaler_counter_high <= scaler_counter_high +1;
+        scaler_counter_low <= (others => '0');
       end if;
       
-      
+      if scaler_counter_high >= scaler_counter_high_max then
+        scaller_buffer_out <= scaller_buffer;
+        scaller_buffer <= (others => (others => '0'));
+		    scaler_counter_high <= (others => '0');
+      end if;
+
       reg_out.address <= reg_addr_to_slv(
-                            reg_addr_ctr(
-                              channel => scaler_index, 
-                              asic   =>  std_logic_vector(to_unsigned(asic_number,8)) , 
-                              header => header
-                            ));
-      reg_out.value <= scaller_buffer_out(conv_integer(scaler_index));
+        reg_addr_ctr(
+          channel => scaler_index(5 downto 1), 
+          asic   =>  std_logic_vector(to_unsigned(asic_number,8)) , 
+          header => header,
+          Lower_higher => scaler_index(0) 
+        ));
+      
+      if scaler_index(0) = '0' then 
+        reg_out.value <= scaller_buffer_out(conv_integer(scaler_index(5 downto 1)))(15 downto 0);
+        buffer_sclarer_out_high <= scaller_buffer_out(conv_integer(scaler_index(5 downto 1)))(31 downto 16);
+      else 
+        reg_out.value <= buffer_sclarer_out_high;
+      end if;
       scaler_index <= scaler_index +1;
 
       
-      read_data_s( i_reg,  scaler_counter_max   , register_val.scaler_max_counter );
+      read_data_s( i_reg,  scaler_counter_high_max   , register_val.scaler_max_counter );
     end if;
   end process;
   
