@@ -19,11 +19,9 @@ entity trigger_bit_scaler is
 end entity;
 
 architecture rtl of trigger_bit_scaler is
-  type scaler_buffer_t is array (natural range <>) of STD_LOGIC_VECTOR(31 downto 0);
-  signal scaller_buffer : scaler_buffer_t(0 to 32) := (others => (others => '0'));
-  signal scaller_buffer_out : scaler_buffer_t(0 to 32) := (others => (others => '0'));
+
   
-  signal scaler_index : STD_LOGIC_VECTOR(5 downto 0) := (others => '0');
+  signal scaler_index : STD_LOGIC_VECTOR(0 downto 0) := (others => '0');
   signal buffer_sclarer_out_high : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
   
   
@@ -34,16 +32,46 @@ architecture rtl of trigger_bit_scaler is
   signal scaler_counter_high_max : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
   constant header : STD_LOGIC_VECTOR(3 downto 0) := x"f";
   signal   i_reg           :  registerT:= registerT_null;
-begin
   
+  signal   ADDR     : integer := 5;
+  signal increment_channel : std_logic_vector(ADDR-1 downto 0) := (others => '0');
+  signal increment_valid   : std_logic := '0';
+  
+   signal i_Cycle_over : std_logic := '0';
+   
+
+   signal B_increment : std_logic  :=  '0';
+   signal B_addrb     : std_logic_vector(ADDR-1 downto 0) := (others => '0');
+   signal B_doutb     : std_logic_vector(32-1 downto 0) := (others => '0');
+begin
+  i_Scaler_counter : entity work.Scaler_counter  generic map(
+      DATA     => 32,
+      ADDR     => ADDR 
+    ) port map (
+      clk => globals.clk,
+      rst => '0',
+      increment_channel => increment_channel,
+      increment_valid  =>increment_valid,
+      
+      Cycle_over => i_Cycle_over,
+
+      B_increment => B_increment, 
+      B_addrb  => B_addrb,
+      B_doutb  => B_doutb
+    );
+  
+
   process(globals.clk) is
-    variable index : integer := 0;
   begin
     if rising_edge(globals.clk) then 
       scaler_counter_low <= scaler_counter_low +1;
+      increment_valid <= '0';
+      i_Cycle_over <= '0';
+      B_increment <='0';
+      
       if is_valid(edgedetection_tb_out) then 
-        index := conv_integer(get_data(edgedetection_tb_out));
-        scaller_buffer(index) <= scaller_buffer(index)  +1;
+        increment_channel <= get_data(edgedetection_tb_out)(5 downto 1);
+        increment_valid <= '1';
       end if;
       if scaler_counter_low >= scaler_counter_low_max then
         scaler_counter_high <= scaler_counter_high +1;
@@ -51,22 +79,24 @@ begin
       end if;
       
       if scaler_counter_high >= scaler_counter_high_max then
-        scaller_buffer_out <= scaller_buffer;
-        scaller_buffer <= (others => (others => '0'));
+        i_Cycle_over <= '1';
 		    scaler_counter_high <= (others => '0');
       end if;
 
+
+      
       reg_out.address <= reg_addr_to_slv(
-        reg_addr_ctr(
-          channel => scaler_index(5 downto 1), 
-          asic   =>  std_logic_vector(to_unsigned(asic_number,8)) , 
-          header => header,
-          Lower_higher => scaler_index(0) 
-        ));
+          reg_addr_ctr(
+            channel => B_addrb, 
+            asic   =>  std_logic_vector(to_unsigned(asic_number,8)) , 
+            header => header,
+            Lower_higher => scaler_index(0) 
+          ));
       
       if scaler_index(0) = '0' then 
-        reg_out.value <= scaller_buffer_out(conv_integer(scaler_index(5 downto 1)))(15 downto 0);
-        buffer_sclarer_out_high <= scaller_buffer_out(conv_integer(scaler_index(5 downto 1)))(31 downto 16);
+        reg_out.value <= B_doutb(15 downto 0);
+        buffer_sclarer_out_high(15 downto 0) <= B_doutb(31 downto 16);
+        B_increment <='1';
       else 
         reg_out.value <= buffer_sclarer_out_high;
       end if;
