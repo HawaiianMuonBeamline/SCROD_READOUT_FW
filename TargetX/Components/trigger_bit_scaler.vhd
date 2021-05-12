@@ -9,7 +9,7 @@ library IEEE;
 
 entity trigger_bit_scaler is
   generic (
-    asic_number : integer 
+    asic_number : integer := 2
   );
   port (
     globals : globals_t   := globals_t_null;
@@ -21,7 +21,7 @@ end entity;
 architecture rtl of trigger_bit_scaler is
 
   
-  signal scaler_index : STD_LOGIC_VECTOR(0 downto 0) := (others => '0');
+  signal scaler_index : STD_LOGIC:=  '0';
   signal buffer_sclarer_out_high : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');
   
   
@@ -62,6 +62,7 @@ begin
   
 
   process(globals.clk) is
+    variable v_addrb     : std_logic_vector(ADDR-1 downto 0) := (others => '0');
   begin
     if rising_edge(globals.clk) then 
       scaler_counter_low <= scaler_counter_low +1;
@@ -79,29 +80,37 @@ begin
       end if;
       
       if scaler_counter_high >= scaler_counter_high_max then
+      --if scaler_counter_low = x"0100" then
         i_Cycle_over <= '1';
 		    scaler_counter_high <= (others => '0');
+--        scaler_counter_low <= (others => '0');
       end if;
 
 
       
-      reg_out.address <= reg_addr_to_slv(
-          reg_addr_ctr(
-            channel => B_addrb, 
-            asic   =>  std_logic_vector(to_unsigned(asic_number,8)) , 
-            header => header,
-            Lower_higher => scaler_index(0) 
-          ));
-      
-      if scaler_index(0) = '0' then 
-        reg_out.value <= B_doutb(15 downto 0);
+
+
+        
+      if scaler_index = '0' then 
+        scaler_index <= '1';
+		    reg_out.value <= B_doutb(15 downto 0);
         buffer_sclarer_out_high(15 downto 0) <= B_doutb(31 downto 16);
         B_increment <='1';
-      else 
+        v_addrb := B_addrb;
+        
+
+      else
+		  scaler_index <= '0';		
         reg_out.value <= buffer_sclarer_out_high;
       end if;
-      scaler_index <= scaler_index +1;
-
+    
+      reg_out.address <= reg_addr_to_slv(
+        reg_addr_ctr(
+          channel => v_addrb, 
+          asic   =>  std_logic_vector(to_unsigned(asic_number,8)) , 
+          header => header,
+          Lower_higher => scaler_index 
+        ));
       
       read_data_s( i_reg,  scaler_counter_high_max   , register_val.scaler_max_counter );
     end if;

@@ -212,11 +212,12 @@ end function;
 function reg_addr_to_slv(data_in : reg_addr) return STD_LOGIC_VECTOR is
     variable ret : STD_LOGIC_VECTOR(15 downto 0)  := (others => '0');
   begin
-    ret(15                                               downto 12)                      := data_in.header ;
-    ret(data_in.asic'length + data_in.channel'length)                                    := data_in.Lower_higher;
-    ret(data_in.asic'length + data_in.channel'length - 1 downto data_in.channel'length ) := data_in.asic ;
-    ret(data_in.channel'length - 1                       downto 0 )                      := data_in.channel;
-  return ret;  
+    
+    ret(data_in.channel'length - 1                          downto 0 )                           := data_in.channel;
+    ret(data_in.channel'length)                                                                  := data_in.Lower_higher;
+    ret(data_in.asic'length - 1  + data_in.channel'length+1 downto data_in.channel'length +1)    := data_in.asic ;
+    ret(15                                                  downto 12)                           := data_in.header ;
+    return ret;  
   end function;
   
   
