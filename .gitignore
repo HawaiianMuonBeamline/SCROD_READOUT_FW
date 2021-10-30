@@ -13,3 +13,5 @@
 /startNewRun.sh
 /update_test_cases.sh
 *.root
+
+/license.v4p
