@@ -111,6 +111,7 @@ package roling_register_p is
     MppcAdcChanN : integer;
     MppcAdcData  : integer;
     ADCdebug   : integer;
+    DAC_MASK   : integer;
     scaler_max_counter  : integer;
   end record;
 
@@ -179,7 +180,7 @@ package roling_register_p is
     MppcAdcChanN  =>  4002,
     MppcAdcData   =>  4003,
     ADCdebug   =>  4004,
-    
+    DAC_MASK  => 4005,
     scaler_max_counter => 4010
   );
 

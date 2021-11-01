@@ -25,17 +25,17 @@ end clk_div;
 
 architecture beh of clk_div is
    constant max_cnt      : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(RATIO/2 - 1, 32));
-   constant max_cnt_prd : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(RATIO - 1, 32));
+   constant max_cnt_prd  : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(RATIO - 1, 32));
    constant zero_cnt     : std_logic_vector(31 downto 0) := (others => '0');
    signal   i_cnt        : std_logic_vector(31 downto 0) := (others => '0');
-   signal   i_clkdiv        : std_logic := '0';
+   signal   i_clkdiv     : std_logic := '0';
 
    signal   i_hb_cnt     : std_logic_vector(31 downto 0) := (others => '0');
    signal   i_hb         : std_logic;
 
-   signal   i_strb_cnt : std_logic_vector(31 downto 0) := (others => '0');
-   signal   i_strb     : std_logic := '0';
-   signal   i_strb_e   : std_logic := '0';
+   signal   i_strb_cnt   : std_logic_vector(31 downto 0) := (others => '0');
+   signal   i_strb       : std_logic := '0';
+   signal   i_strb_e     : std_logic := '0';
 begin                                                                                                                
 
    CLK_PROC : process(clk)

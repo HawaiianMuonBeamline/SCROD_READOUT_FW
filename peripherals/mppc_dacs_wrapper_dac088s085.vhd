@@ -21,14 +21,11 @@ entity mppc_dacs_wrapper_dac088s085 is
 		DAC_ADDR     : IN  STD_LOGIC_VECTOR(3 downto 0);
 		DAC_VALUE    : IN  STD_LOGIC_VECTOR(7 downto 0);
 		WRITE_STROBE : IN  STD_LOGIC;
-		BUSY			 : out std_logic;
+		BUSY	     : out std_logic;
 		------------HW INTERFACE----------
 		SCK_DAC		 : OUT STD_LOGIC;
 		DIN_DAC		 : OUT STD_LOGIC;
-		CS_DAC       : OUT STD_LOGIC_VECTOR(9 downto 0);
-
-      dbg1         : out std_logic_vector(15 downto 0);
-      dbg2         : out std_logic_vector(15 downto 0)
+		CS_DAC       : OUT STD_LOGIC_VECTOR(9 downto 0)
 	);
 end mppc_dacs_wrapper_dac088s085;
 
@@ -44,11 +41,10 @@ architecture Behavioral of mppc_dacs_wrapper_dac088s085 is
 	signal i_din_dac    : std_logic;
 	signal i_cs_dac     : std_logic;	
 
-   signal clock        : std_logic;
+   signal clock          : std_logic;
    signal i_write_strobe : std_logic;
    signal i_hb           : std_logic;
 
-   signal i_dbg        : std_logic_vector(15 downto 0) := (others => '0');
 	
 begin
 
@@ -72,12 +68,8 @@ begin
          i_dac_number <= DAC_NUMBER;
          i_dac_addr   <= DAC_ADDR;
          i_dac_value  <= DAC_VALUE;
-
-
 		end if;
 	end process;
-
-   dbg1 <= i_dbg;
 
 i_mppc_bias_dac088s085: entity work.mppc_bias_dac088s085 
 port map(
@@ -89,9 +81,7 @@ port map(
    busy    => busy,
    sclk    => i_sck_dac,
    sync_n  => i_cs_dac,
-   din     => i_din_dac,
-
-   dbg => dbg2
+   din     => i_din_dac
 );
 
 
@@ -105,7 +95,7 @@ port map(
 	              "1101111111" when i_dac_number = x"7" else
 	              "1011111111" when i_dac_number = x"8" else
 	              "0111111111" when i_dac_number = x"9" else
-					  "1111111111";
+				  "1111111111";
 
 	-- outputs
 	SCK_DAC <= i_sck_dac;

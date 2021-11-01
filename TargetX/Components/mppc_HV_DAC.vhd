@@ -28,7 +28,7 @@ entity mppc_HV_DAC is
 
     --- MPPC ADC
     SCL_MON                  : out STD_LOGIC;
-    SDA_MON                  : inout STD_LOGIC;
+    SDA_MON                  : out STD_LOGIC;
 
 
     ---
@@ -44,6 +44,8 @@ end entity;
 
 architecture rtl of mppc_HV_DAC is
   signal   i_reg           :  registerT:= registerT_null;
+
+  signal i_counter : std_logic_vector(15 downto 0):=(others =>'0');
   -- MPPC DAC signals
   signal i_hv_sck_dac         : std_logic := '0';
   signal i_hv_din_dac         : std_logic := '0';
@@ -73,11 +75,16 @@ architecture rtl of mppc_HV_DAC is
   signal RX_REG_DATA_m2s     : axisStream_32_m2s := axisStream_32_m2s_null;
   signal RX_REG_DATA_s2m     : axisStream_32_s2m := axisStream_32_s2m_null;
 
-  type state_t is (idle, sending, waiting);
+
+  type state_t is (idle,wait_for_sending, sending, waiting, done);
   signal i_state : state_t := idle;
+
+  signal i_wait_between_sending_counter : std_logic_vector(15 downto 0) := (others => '0');
+
 begin
 
 
+  
 
   process(globals.clk) is 
     variable TX : axisStream_32_master:= axisStream_32_master_null;
@@ -99,7 +106,8 @@ begin
 
       read_data_s( i_reg,  MppcAdcAsicN   , register_val.MppcAdcAsicN );
       read_data_s( i_reg,  MppcAdcChanN   , register_val.MppcAdcChanN );
-      read_data_s( i_reg,  ADCdebug ,       register_val.ADCdebug);
+      read_data_s( i_reg,  ADCdebug       , register_val.ADCdebug);
+
       if counter > 1000000 then
         RunADC <= '1';
         counter := (others => '0');
@@ -115,11 +123,11 @@ begin
   ) port map (
     clk      =>   globals.clk,
     rst      =>   globals.rst,
-    RX_m2s   => TX_REG_DATA_m2s ,
-    RX_s2m   =>  TX_REG_DATA_s2m,
+    RX_m2s   =>   TX_REG_DATA_m2s,
+    RX_s2m   =>   TX_REG_DATA_s2m,
 
-    TX_m2s  => RX_REG_DATA_m2s,
-    TX_s2m  => RX_REG_DATA_s2m 
+    TX_m2s   =>   RX_REG_DATA_m2s,
+    TX_s2m   =>   RX_REG_DATA_s2m 
 
 
   );
@@ -127,29 +135,45 @@ begin
   process(globals.clk) is 
     variable rx : axisStream_32_slave:= axisStream_32_slave_null;
     variable buff : STD_LOGIC_VECTOR(31 downto 0) := (others =>'0');
-    variable mppc_word       : std_logic_vector(15 downto 0);
+
   begin 
     if rising_edge(globals.clk) then
       pull(rx, RX_REG_DATA_m2s);
-      i_WRITE_STROBE <= '0';       
+      i_WRITE_STROBE <= '0';
+      i_counter <= i_counter+1;    
+      i_wait_between_sending_counter  <= i_wait_between_sending_counter +1;
       case i_state is 
         when idle =>
+          i_wait_between_sending_counter <= (others => '0');
+          i_counter <= (others =>'0');    
           if isReceivingData(rx) then
             read_data(rx, buff);
-            mppc_word := buff(23 downto 16) & buff(7 downto 0); 
-            i_DAC_NUMBER  <= mppc_word(15 downto 12);  
-            i_DAC_ADDR    <= mppc_word(11 downto 8);   
-            i_DAC_VALUE   <= mppc_word(7 downto  0);   
-            i_WRITE_STROBE <= '1';       
-            i_state <= sending;
+            i_DAC_NUMBER  <= buff(23 downto 20); --mppc_word(15 downto 12);  
+            i_DAC_ADDR    <= buff(19 downto 16);-- mppc_word(11 downto 8);   
+            i_DAC_VALUE   <= buff(7 downto 0);   
+          
+            i_state <= wait_for_sending;
           end if;
-
+        when wait_for_sending => 
+				    i_WRITE_STROBE <= '1';
+            if i_counter > 100 then
+				           
+              i_state <= sending;
+            end if;
         when sending => 
           if i_BUSY = '1' then
             i_state <= waiting;
           end if;
         when waiting =>
+          i_wait_between_sending_counter <= (others => '0');
           if i_BUSY = '0' then
+            i_state <= done;
+				    i_DAC_NUMBER  <= (others => '0');
+				    i_DAC_ADDR    <= (others => '0');
+				    i_DAC_VALUE   <= (others => '0');   
+          end if;
+        when done =>
+          if i_wait_between_sending_counter > 20000 then
             i_state <= idle;
           end if;
         when others =>
@@ -175,19 +199,19 @@ begin
       ------------HW INTERFACE----------
       SCK_DAC       => i_hv_sck_dac,
       DIN_DAC       => i_hv_din_dac,
-      CS_DAC        => i_tdc_cs_dac,
+      CS_DAC        => i_tdc_cs_dac
 
-      dbg1           => open,
-      dbg2           => open
+
     );
 
 
   TDC_CS_DAC <= i_tdc_cs_dac;
 
 
-  BUSA_SCK_DAC <= i_hv_sck_dac;
-  BUSB_SCK_DAC <= i_hv_sck_dac;
+  BUSA_SCK_DAC <= i_hv_sck_dac ;
   BUSA_DIN_DAC <= i_hv_din_dac;
+  
+  BUSB_SCK_DAC <= i_hv_sck_dac;
   BUSB_DIN_DAC <= i_hv_din_dac;
 
   -------------------------------------------------------------------
@@ -217,8 +241,11 @@ begin
       ADCOutput   => i_MppcAdcData  
 
     );
-  reg_out.value <= "0000"&i_MppcAdcData;
-  reg_out.address <= x"aba1";
+  --reg_out.value <= (others => '0'); -- "0000"&i_MppcAdcData;
+  --reg_out.address <= x"aba1";
+
+  --reg_out.address(0) <=  i_hv_sck_dac;
+  --reg_out.value(0) <=  i_hv_din_dac;
   SDA_MON <= i_sda_mon ;
   SCL_MON <= i_scl_mon;
   ---------------------------------------------------------------
