@@ -59,8 +59,7 @@ architecture rtl of mppc_HV_DAC is
   signal i_BUSY         : std_logic;
 
 
-  signal i_sda_mon : std_logic;
-  signal i_scl_mon : std_logic;
+
 
   signal MppcAdcAsicN               : std_logic_vector(3 downto 0); -- what the difference between these two?
   signal MppcAdcChanN               : std_logic_vector(3 downto 0); -- TODO: check schematic
@@ -234,20 +233,19 @@ begin
 
       debugmode    => ADCdebug,
 
-      sda          => i_sda_mon,
-      scl          => i_scl_mon,
+      sda          => SDA_MON,
+      scl          => SCL_MON,
 
       runADC      => RunADC, --REG(63)(8)
       ADCOutput   => i_MppcAdcData  
 
     );
-  --reg_out.value <= (others => '0'); -- "0000"&i_MppcAdcData;
-  --reg_out.address <= x"aba1";
 
-  --reg_out.address(0) <=  i_hv_sck_dac;
-  --reg_out.value(0) <=  i_hv_din_dac;
-  SDA_MON <= i_sda_mon ;
-  SCL_MON <= i_scl_mon;
+  reg_out.value   <= "0000"&i_MppcAdcData;
+  reg_out.address <= x"aba1";
+
+
+
   ---------------------------------------------------------------
   reg_buffer : entity work.registerBuffer generic map (
     Depth =>  10

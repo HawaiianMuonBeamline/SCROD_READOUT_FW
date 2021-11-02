@@ -556,12 +556,11 @@ reg_merger:   entity work.register_merger
     BUSA_DIN_DAC <= i_BUSA_DIN_DAC;
     BUSB_SCK_DAC <= i_BUSB_SCK_DAC	;
     BUSB_DIN_DAC <= i_BUSB_DIN_DAC	;
-    mppv_hv_reg_out.address(0) <=i_BUSA_SCK_DAC;
-    mppv_hv_reg_out.value(0) <=  i_BUSA_DIN_DAC;
+
 
     mppv_hv : entity work.mppc_HV_DAC port map(
         globals => globals,
-        reg_out         => open,-- mppv_hv_reg_out,
+        reg_out         => mppv_hv_reg_out,
 
 
         -- MPPC HV DAC
