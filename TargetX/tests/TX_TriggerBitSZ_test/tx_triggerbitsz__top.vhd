@@ -274,6 +274,7 @@ library UNISIM;
   use work.klm_scint_globals.all;
   use work.tdc_pkg.all;
   use work.roling_register_p.all;
+  use IEEE.std_logic_misc.or_reduce;
 use ieee.std_logic_unsigned.all;
   
 entity tx_triggerbitsz_top is
@@ -334,6 +335,8 @@ entity tx_triggerbitsz_top is
    --
    -- TRIGGER SIGNALS
     TARGET_TB                : in tb_vec_type;
+    EX_TRIGGER_MB  : out std_logic := '0';
+    EX_TRIGGER_SCROD  : out std_logic := '0';
    
    TDC_DONE                 : in STD_LOGIC_VECTOR(9 downto 0) := (others => '0')  ; -- move to readout signals
    TDC_MON_TIMING           : in STD_LOGIC_VECTOR(9 downto 0) := (others => '0')  ;  -- add the ref to the programming of the TX chip
@@ -388,10 +391,10 @@ architecture rtl of tx_triggerbitsz_top is
      
   signal userRst     : sl;
   --constant ethCoreIpAddr  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14"); --192.168.1.20
-  SIGNAL ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   --192.168.2.20;
+  SIGNAL ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14");   --192.168.2.20;
   constant udpPort0        :  slv(15 downto 0):=  x"07D1" ;  -- 2001
   --constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");  --192.168.1.33;
-  signal ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");    --192.168.2.33;
+  signal ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");    --192.168.2.33;
   constant udpPort1        :  slv(15 downto 0):=  x"07D2" ;  -- 2002
 
      
@@ -415,13 +418,15 @@ architecture rtl of tx_triggerbitsz_top is
   signal reg_in         : registerT := registerT_null;   
   signal mppv_hv_reg_out         : registerT := registerT_null;  
   signal u_dut_reg_out         : registerT := registerT_null;  
-  
+  signal i_trigger_out : std_logic := '0';
   
   signal startup_Counter : slv(15 downto 0) := (others => '0');
   signal userRstIn : STD_LOGIC := '0';
   signal DNA_Buffer : Word16Array( 0 to 3) := (others => (others =>'0'));
   constant  DNA_SCROD_1 : Word16Array( 0 to 3) := (3 => x"013f" , 2 => x"DDFF", 1 => x"B5C7" , 0 => x"6E5A"); -- SCROD1
   --constant  DNA_SCROD_2 : Word16Array( 0 to 3) := (3 => x"0131" , 2 => x"469A", 1 => x"337E" , 0 => x"6746"); --SCROD2
+
+  
 begin
   
   U_IBUFGDS : IBUFGDS port map ( I => fabClkP, IB => fabClkN, O => fabClk);
@@ -480,9 +485,21 @@ reg_merger:   entity work.register_merger
 
  );
 
+  process(globals.clk)
+  begin
+    if rising_edge(globals.clk) then
+      i_trigger_out <= '0';
+      for i in TARGET_TB'range loop
+        if (or_reduce(TARGET_TB(i)) ='1') then
+          i_trigger_out <= '1';
+        end if;
+      end loop;
+    end if;
+  end process;
   
 -- </Connecting the BUS to the pseudo class>
-
+  EX_TRIGGER_MB <= i_trigger_out;
+  EX_TRIGGER_SCROD <= i_trigger_out;
 
   --------------------------------
   -- Gigabit Ethernet Interface --
@@ -546,8 +563,8 @@ reg_merger:   entity work.register_merger
     RxDataLast   => userRxDataLasts(0),
     RxDataReady  => userRxDataReadys(0),
 
-    --reg_in    => reg_in,
-     reg_in    => mppv_hv_reg_out,
+    reg_in    => reg_in,
+    -- reg_in    => mppv_hv_reg_out,
     globals => globals,
     TX_DAC_control_out => TX_DAC_control_out
   );

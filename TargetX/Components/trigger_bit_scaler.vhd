@@ -97,10 +97,8 @@ begin
         buffer_sclarer_out_high(15 downto 0) <= B_doutb(31 downto 16);
         B_increment <='1';
         v_addrb := B_addrb;
-        
-
       else
-		  scaler_index <= '0';		
+		    scaler_index <= '0';		
         reg_out.value <= buffer_sclarer_out_high;
       end if;
     

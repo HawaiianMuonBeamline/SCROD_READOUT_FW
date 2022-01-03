@@ -29,6 +29,10 @@ entity roling_register_m_eth is
     TxDataValid   : out  sl := '0';
     TxDataLast    : out  sl := '0';
     TxDataReady   : in   sl := '0';
+
+
+
+    
     RxDataChannel : in   DWORD := (others => '0');
     RxDataValid   : in   sl := '0';
     RxDataLast    : in   sl := '0';
