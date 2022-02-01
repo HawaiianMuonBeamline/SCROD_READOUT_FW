@@ -14,3 +14,7 @@
 /update_test_cases.sh
 *.root
 /license.v4p
+
+
+
+*.DS_Store

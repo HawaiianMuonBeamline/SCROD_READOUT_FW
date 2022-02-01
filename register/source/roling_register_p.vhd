@@ -30,6 +30,8 @@ package roling_register_p is
     channel  => (others => '0'),
     Lower_higher => '0'
   );
+
+  constant Register_signle_bit_header : std_logic_vector(31 downto 0) := (others => '1');
   
   -- procedure read_data(self : in registerT; value :out  STD_LOGIC_VECTOR; addr :in integer);
 
