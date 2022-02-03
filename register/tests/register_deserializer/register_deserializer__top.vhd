@@ -1,4 +1,4 @@
--- <header>Header; Nr_of_streams; recording TimeStamp; Operation; Number of packets; packateNr; Sending TimeStamp; globals_clk; globals_rst; globals_reg_address; globals_reg_value; target_tb_in_1; target_tb_in_2; target_tb_in_3; target_tb_in_4; target_tb_in_5; target_tb_in_6; target_tb_in_7; target_tb_in_8; target_tb_in_9; target_tb_out_1; target_tb_out_2; target_tb_out_3; target_tb_out_4; target_tb_out_5; target_tb_out_6; target_tb_out_7; target_tb_out_8; target_tb_out_9; read_out; busa_clr_in; busa_clr_out; Tail</header>
+-- <header>Header; Nr_of_streams; recording TimeStamp; Operation; Number of packets; packateNr; Sending TimeStamp; register_serial_in; register_out_address; register_out_value; register_out_new_value; Tail</header>
 
 
 
@@ -6,21 +6,18 @@ library IEEE;
   use IEEE.std_logic_1164.all;
   use IEEE.numeric_std.all;
 
-library UNISIM;
-  use UNISIM.VComponents.all;
+
   use work.UtilityPkg.all;
 
-  use work.tx_triggerbitsz_IO_pgk.all;
+  use work.register_deserializer_IO_pgk.all;
   use work.type_conversions_pgk.all;
   use work.Imp_test_bench_pgk.all;
   use work.xgen_klm_scrod_bus.all;
   use work.klm_scint_globals.all;
-  use work.roling_register_p.all;
-  use work.tdc_pkg.all;
-entity tx_triggerbitsz_eth is
+
+entity register_deserializer_eth is
   port (
     globals :  in globals_t := globals_t_null;
-    reg_out         : out registerT := registerT_null;  
     
     TxDataChannel : out  DWORD := (others => '0');
     TxDataValid   : out  sl := '0';
@@ -31,13 +28,12 @@ entity tx_triggerbitsz_eth is
     RxDataLast    : in   sl := '0';
     RxDataReady   : out  sl := '0';
 
-    TARGET_TB     : in tb_vec_type;
     TXBus_m2s     : in   DataBus_m2s_a(1 downto 0) := (others => DataBus_m2s_null);
     TXBus_s2m     : out  DataBus_s2m_a(1 downto 0) := (others => DataBus_s2m_null)
   );
 end entity;
 
-architecture rtl of tx_triggerbitsz_eth is
+architecture rtl of register_deserializer_eth is
   
   constant Throttel_max_counter : integer  := 10;
   constant Throttel_wait_time : integer := 100000;
@@ -52,47 +48,17 @@ architecture rtl of tx_triggerbitsz_eth is
   signal  i_TxDataReadys   :  sl := '0';
 
   constant FIFO_DEPTH : integer := 10;
-  constant COLNum : integer := 15;
+  constant COLNum : integer := 1;
   signal i_data :  Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
   signal i_controls_out    : Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
   signal i_valid      : sl := '0';
    
-  constant COLNum_out : integer := 25;
+  constant COLNum_out : integer := 4;
   signal i_data_out :  Word32Array(COLNum_out -1 downto 0) := (others => (others => '0'));
    
 
-  signal data_in  : tx_triggerbitsz_reader_rec := tx_triggerbitsz_reader_rec_null;
-  signal data_out : tx_triggerbitsz_writer_rec := tx_triggerbitsz_writer_rec_null;
-  
-  signal timestamp             : std_logic_vector(31 downto 0) := (others => '0');
-  signal timestamp_out_fine    : std_logic_vector(31 downto 0) := (others => '0');
-  signal current_timestamp_out : std_logic_vector(31 downto 0) := (others => '0');
-
-  signal timestamp_out_reset   :   std_logic_vector(31 downto 0) := (others => '0');
-  signal readout_counter  : std_logic_vector(31 downto 0) := (others => '0');
-  
-  signal tx_trigger_bit_asic_0 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_1 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_2 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_3 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_4 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_5 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_6 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_7 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_8 : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_9 : std_logic_vector(4 downto 0) := (others => '0');
-  
-  
-  signal tx_trigger_bit_asic_0_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_1_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_2_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_3_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_4_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_5_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_6_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_7_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_8_in : std_logic_vector(4 downto 0) := (others => '0');
-  signal tx_trigger_bit_asic_9_in : std_logic_vector(4 downto 0) := (others => '0');
+  signal data_in  : register_deserializer_reader_rec := register_deserializer_reader_rec_null;
+  signal data_out : register_deserializer_writer_rec := register_deserializer_writer_rec_null;
   
 begin
   
@@ -149,101 +115,32 @@ throttel : entity work.axiStreamThrottle
         txDataReady     =>  TxDataReady
     );
 -- <DUT>
-    DUT :  entity work.tx_triggerbitsz port map(
-  globals => globals,
-  reg_out => reg_out,
-  target_tb_in => TARGET_TB,
-  target_tb_out => data_out.target_tb_out,
-  read_out => data_out.read_out,
-  busa_clr_in => data_out.busa_clr_in,
-  busa_clr_out => data_out.busa_clr_out,
-  timestamp_out => timestamp,
-  current_timestamp_out => current_timestamp_out,
-  timestamp_out_fine => timestamp_out_fine,
-  readout_counter => readout_counter,
-  timestamp_out_reset => timestamp_out_reset
+    DUT :  entity work.register_deserializer port map(
+  clk => globals.clk,
+  register_serial_in => data_out.register_serial_in,
+  register_out => data_out.register_out
 );
 -- </DUT>
 
 
 --  <data_out_converter>
-    tx_trigger_bit_asic_0 <= data_out.target_tb_out(1)(5 downto 1);
-    tx_trigger_bit_asic_1 <= data_out.target_tb_out(2)(5 downto 1);
-    tx_trigger_bit_asic_2 <= data_out.target_tb_out(3)(5 downto 1);
-    tx_trigger_bit_asic_3 <= data_out.target_tb_out(4)(5 downto 1);
-    tx_trigger_bit_asic_4 <= data_out.target_tb_out(5)(5 downto 1);
-    tx_trigger_bit_asic_5 <= data_out.target_tb_out(6)(5 downto 1);
-    tx_trigger_bit_asic_6 <= data_out.target_tb_out(7)(5 downto 1);
-    tx_trigger_bit_asic_7 <= data_out.target_tb_out(8)(5 downto 1);
-    tx_trigger_bit_asic_8 <= data_out.target_tb_out(9)(5 downto 1);
-    tx_trigger_bit_asic_9 <= data_out.target_tb_out(10)(5 downto 1);
-    
-    
-    tx_trigger_bit_asic_0_in  <= TARGET_TB(1);
-    tx_trigger_bit_asic_1_in  <= TARGET_TB(2);
-    tx_trigger_bit_asic_2_in  <= TARGET_TB(3);
-    tx_trigger_bit_asic_3_in  <= TARGET_TB(4);
-    tx_trigger_bit_asic_4_in  <= TARGET_TB(5);
-    tx_trigger_bit_asic_5_in  <= TARGET_TB(6);
-    tx_trigger_bit_asic_6_in  <= TARGET_TB(7);
-    tx_trigger_bit_asic_7_in  <= TARGET_TB(8);
-    tx_trigger_bit_asic_8_in  <= TARGET_TB(9);
-    tx_trigger_bit_asic_9_in  <= TARGET_TB(10);
 
-    
-    
-slv_to_slv(timestamp_out_reset, i_data_out(0) );
-slv_to_slv(readout_counter, i_data_out(1) );
-slv_to_slv(current_timestamp_out, i_data_out(2) );
-slv_to_slv(timestamp, i_data_out(3) );
-slv_to_slv(timestamp_out_fine, i_data_out(4) );
-
---slv_to_slv(tx_trigger_bit_asic_0_in , i_data_out(4) );
-slv_to_slv(tx_trigger_bit_asic_1_in , i_data_out(5) );
-slv_to_slv(tx_trigger_bit_asic_2_in , i_data_out(6) );
-slv_to_slv(tx_trigger_bit_asic_3_in , i_data_out(7) );
-slv_to_slv(tx_trigger_bit_asic_4_in , i_data_out(8) );
-slv_to_slv(tx_trigger_bit_asic_5_in , i_data_out(9) );
-slv_to_slv(tx_trigger_bit_asic_6_in , i_data_out(10) );
-slv_to_slv(tx_trigger_bit_asic_7_in , i_data_out(11) );
-slv_to_slv(tx_trigger_bit_asic_8_in , i_data_out(12) );
-
-
-slv_to_slv(tx_trigger_bit_asic_0 , i_data_out(13) );
-slv_to_slv(tx_trigger_bit_asic_1 , i_data_out(14) );
-slv_to_slv(tx_trigger_bit_asic_2 , i_data_out(15) );
-slv_to_slv(tx_trigger_bit_asic_3 , i_data_out(16) );
-slv_to_slv(tx_trigger_bit_asic_4 , i_data_out(17) );
-slv_to_slv(tx_trigger_bit_asic_5 , i_data_out(18) );
-slv_to_slv(tx_trigger_bit_asic_6 , i_data_out(19) );
-slv_to_slv(tx_trigger_bit_asic_7 , i_data_out(20) );
-slv_to_slv(tx_trigger_bit_asic_8 , i_data_out(21) );
-slv_to_slv(tx_trigger_bit_asic_9, i_data_out(22) );
-sl_to_slv(data_out.busa_clr_in, i_data_out(23) );
-sl_to_slv(data_out.busa_clr_out, i_data_out(24) );
+sl_to_slv(data_out.register_serial_in, i_data_out(0) );
+slv_to_slv(data_out.register_out.address, i_data_out(1) );
+slv_to_slv(data_out.register_out.value, i_data_out(2) );
+sl_to_slv(data_out.register_out.new_value, i_data_out(3) );
 
 --  </data_out_converter>
 
 -- <data_in_converter> 
 
-slv_to_sl(i_data(0), data_in.globals.clk);
-slv_to_sl(i_data(1), data_in.globals.rst);
-slv_to_slv(i_data(2), data_in.globals.reg.address);
-slv_to_slv(i_data(3), data_in.globals.reg.value);
-slv_to_slv(i_data(13), data_in.read_out);
-slv_to_sl(i_data(14), data_in.busa_clr_in);
+slv_to_sl(i_data(0), data_in.register_serial_in);
 
 --</data_in_converter>
 
 -- <connect_input_output>
 
-data_out.globals <= data_in.globals;
-data_out.target_tb_in <= data_in.target_tb_in;
-data_out.read_out <= data_in.read_out;
-data_out.busa_clr_in <= data_in.busa_clr_in;
-
-
-
+data_out.register_serial_in <= data_in.register_serial_in;
 
 -- </connect_input_output>
 
@@ -273,11 +170,9 @@ library UNISIM;
   use work.xgen_klm_scrod_bus.all;
   use work.klm_scint_globals.all;
   use work.tdc_pkg.all;
-  use work.roling_register_p.all;
-  use IEEE.std_logic_misc.or_reduce;
-use ieee.std_logic_unsigned.all;
+
   
-entity tx_triggerbitsz_top is
+entity register_deserializer_top is
    port (
     -- Direct GT connections
     gtTxP        : out sl;
@@ -335,8 +230,6 @@ entity tx_triggerbitsz_top is
    --
    -- TRIGGER SIGNALS
     TARGET_TB                : in tb_vec_type;
-    EX_TRIGGER_MB            : out std_logic := '0';
-    EX_TRIGGER_SCROD         : out std_logic := '0';
    
    TDC_DONE                 : in STD_LOGIC_VECTOR(9 downto 0) := (others => '0')  ; -- move to readout signals
    TDC_MON_TIMING           : in STD_LOGIC_VECTOR(9 downto 0) := (others => '0')  ;  -- add the ref to the programming of the TX chip
@@ -347,25 +240,21 @@ entity tx_triggerbitsz_top is
     SSTIN_P :  out STD_LOGIC_VECTOR (9 downto 0) := (others => '0')  ;
    
     --- MPPC ADC
-    SCL_MON                  : out STD_LOGIC;
-    SDA_MON                  : inout STD_LOGIC;
+    SCL_MON                  : out STD_LOGIC := '0';
+    SDA_MON                  : inout STD_LOGIC := '0';
     
-    TDC_CS_DAC               : out std_logic_vector(9 downto 0); 
+    TDC_CS_DAC               : out std_logic_vector(9 downto 0):= (others => '0') ; 
 
-   TDC_AMUX_S               : out std_logic_vector(3 downto 0); -- what the difference between these two?
-   TOP_AMUX_S               : out std_logic_vector(3 downto 0) -- TODO: check schematic
+   TDC_AMUX_S               : out std_logic_vector(3 downto 0):= (others => '0') ; -- what the difference between these two?
+   TOP_AMUX_S               : out std_logic_vector(3 downto 0):= (others => '0')  -- TODO: check schematic
   );
 end entity;
 
-architecture rtl of tx_triggerbitsz_top is
+architecture rtl of register_deserializer_top is
 
   signal TXBus_m2s : DataBus_m2s_a(1 downto 0) := (others => DataBus_m2s_null);
   signal TXBus_s2m : DataBus_s2m_a(1 downto 0) := (others => DataBus_s2m_null);
-   
-  signal i_BUSA_SCK_DAC		       :  std_logic := '0';
-  signal i_BUSA_DIN_DAC		       :  std_logic := '0';
-  signal i_BUSB_SCK_DAC		       :  std_logic := '0';
-  signal i_BUSB_DIN_DAC		       :  std_logic := '0';
+
 
   signal fabClk       : sl := '0';
   -- User Data interfaces
@@ -374,9 +263,7 @@ architecture rtl of tx_triggerbitsz_top is
 
 
   signal globals :   globals_t := globals_t_null;
-  constant NumberOfACICs: integer := 10;
-  signal    TX_DAC_control_out : TX_DAC_control_a( 0 to NumberOfACICs -1) :=  (others => TX_DAC_control_null);
- -- signal TX_DAC_control_out :   TX_DAC_control := TX_DAC_control_null;
+  signal TX_DAC_control_out :   TX_DAC_control := TX_DAC_control_null;
 
   constant NUM_IP_G        : integer := 2;
      
@@ -390,12 +277,9 @@ architecture rtl of tx_triggerbitsz_top is
   signal ethCoreMacAddr : MacAddrType := MAC_ADDR_DEFAULT_C;
      
   signal userRst     : sl;
-  --constant ethCoreIpAddr  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14"); --192.168.1.20
-  SIGNAL ethCoreIpAddr0  : IpAddrType  :=  (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   --192.168.2.20;
-  constant udpPort0        :  slv(15 downto 0):=  x"07D1" ;  -- 2001
-  --constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");  --192.168.1.33;
-  signal ethCoreIpAddr1  : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");    --192.168.2.33;
-  constant udpPort1        :  slv(15 downto 0):=  x"07D2" ;  -- 2002
+  signal ethCoreIpAddr  : IpAddrType  := IP_ADDR_DEFAULT_C;
+  constant ethCoreIpAddr1 : IpAddrType  := (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");
+  constant udpPort        :  slv(15 downto 0):=  x"07D1" ;  -- 0x7d1
 
      
   signal will_clk: std_logic := '0';
@@ -412,38 +296,13 @@ architecture rtl of tx_triggerbitsz_top is
   signal userRxDataValids   : slv(NUM_IP_G-1 downto 0);
   signal userRxDataLasts    : slv(NUM_IP_G-1 downto 0);
   signal userRxDataReadys   : slv(NUM_IP_G-1 downto 0);
-  
-  
-  
-  signal reg_in         : registerT := registerT_null;   
-  signal mppv_hv_reg_out         : registerT := registerT_null;  
-  signal u_dut_reg_out         : registerT := registerT_null;  
-  signal i_trigger_out : std_logic := '0';
-  
-  signal startup_Counter : slv(15 downto 0) := (others => '0');
-  signal userRstIn : STD_LOGIC := '0';
-  signal DNA_Buffer : Word16Array( 0 to 3) := (others => (others =>'0'));
-  constant  DNA_SCROD_1 : Word16Array( 0 to 3) := (3 => x"013f" , 2 => x"DDFF", 1 => x"B5C7" , 0 => x"6E5A"); -- SCROD1
-  --constant  DNA_SCROD_2 : Word16Array( 0 to 3) := (3 => x"0131" , 2 => x"469A", 1 => x"337E" , 0 => x"6746"); --SCROD2
-
-  
+    
 begin
   
   U_IBUFGDS : IBUFGDS port map ( I => fabClkP, IB => fabClkN, O => fabClk);
 
 
 
-reg_merger:   entity work.register_merger 
-    generic map(
-      Num_of_inputs => 2,
-      index_counter_max=>997 -- prime number
-    ) port map(
-      clk => globals.clk,
-
-      reg_in    => (0=>  mppv_hv_reg_out, 1 => u_dut_reg_out ),
-      reg_out   => reg_in
-    );
-  
 
 -- <Connecting the BUS to the pseudo class>
   
@@ -485,16 +344,6 @@ reg_merger:   entity work.register_merger
 
  );
 
- u_Trigger_bits_probe_out : entity work.Trigger_bits_probe_out port map(
-
-   globals => globals,
-   TARGET_TB => TARGET_TB,
-   sl_Trigger_out => i_trigger_out
-   
- );
-  EX_TRIGGER_MB <= i_trigger_out;
-  EX_TRIGGER_SCROD <= i_trigger_out;
-
   
 -- </Connecting the BUS to the pseudo class>
 
@@ -527,11 +376,11 @@ reg_merger:   entity work.register_merger
       led             => open,
       -- Core settings in 
       macAddr         => ethCoreMacAddr,
-      ipAddrs         => (0 => ethCoreIpAddr0, 1 => ethCoreIpAddr1),
-      udpPorts        => (0 => udpPort0,       1 => udpPort1), --x7D0 = 2000,
+      ipAddrs         => (0 => ethCoreIpAddr, 1 => ethCoreIpAddr1),
+      udpPorts        => (0 => x"07D0",       1 => udpPort), --x7D0 = 2000,
       -- User clock inputs
       userClk         => ethClk125,
-      userRstIn       => userRstIn,
+      userRstIn       => '0',
       userRstOut      => userRst,
       -- User data interfaces
       userTxData      => userTxDataChannels,
@@ -546,10 +395,7 @@ reg_merger:   entity work.register_merger
   
   
 
-    register_handler : entity work.roling_register_m_eth 
-      generic map (
-        NumberOfACICs => NumberOfACICs 
-      ) port map(
+    register_handler : entity work.roling_register_eth port map(
     clk => ethClk125,
 
     TxDataChannel =>   userTxDataChannels(0),
@@ -561,86 +407,18 @@ reg_merger:   entity work.register_merger
     RxDataLast   => userRxDataLasts(0),
     RxDataReady  => userRxDataReadys(0),
 
-    reg_in    => reg_in,
-    -- reg_in    => mppv_hv_reg_out,
+
     globals => globals,
     TX_DAC_control_out => TX_DAC_control_out
   );
-
-    BUSA_SCK_DAC <= i_BUSA_SCK_DAC;
-    BUSA_DIN_DAC <= i_BUSA_DIN_DAC;
-    BUSB_SCK_DAC <= i_BUSB_SCK_DAC	;
-    BUSB_DIN_DAC <= i_BUSB_DIN_DAC	;
-
-
-    mppv_hv : entity work.mppc_HV_DAC port map(
-        globals => globals,
-        reg_out         => mppv_hv_reg_out,
-
-
-        -- MPPC HV DAC
-        BUSA_SCK_DAC        => i_BUSA_SCK_DAC	,
-        BUSA_DIN_DAC        => i_BUSA_DIN_DAC	,
-        BUSB_SCK_DAC        => i_BUSB_SCK_DAC	,
-        BUSB_DIN_DAC        => i_BUSB_DIN_DAC	,
-        --
-        --target_tb16              : in std_logic_vector(1 to TDC_NUM_CHAN);
-
-        TDC_CS_DAC          => TDC_CS_DAC,
-
-        TDC_AMUX_S          => TDC_AMUX_S,
-        TOP_AMUX_S          => TOP_AMUX_S,
-
-        --- MPPC ADC
-        SCL_MON             =>  SCL_MON,
-        SDA_MON             => SDA_MON,                  
-
-        ---
-
-        --TMP                      : out std_logic_vector(31 downto 0);
-
-        TDC_DONE           => TDC_DONE,
-        TDC_MON_TIMING =>TDC_MON_TIMING
-
-
-      );
-    
-
-    dna : entity work.DeviceDNA_handler port map( 
-        globals   => globals,
-        dnaOut  => open,
-        reg_out   => open,
-        Data_buffer_out => DNA_Buffer
-      );
-    
-   process(globals.clk) is 
-   begin 
-     if rising_edge(globals.clk) then
-       userRstIn <= '0';
-       if startup_Counter < 60000 then 
-         startup_Counter <= startup_Counter +1;
-       elsif  startup_Counter < 60005 then
-         startup_Counter <= startup_Counter +1;
-         userRstIn <= '1';
-       else 
-          
-       end if;
-       if DNA_SCROD_1(0) = DNA_Buffer(0) and  DNA_SCROD_1(1) = DNA_Buffer(1) and DNA_SCROD_1(2) = DNA_Buffer(2) and DNA_SCROD_1(3) = DNA_Buffer(3) then 
-         --ethCoreIpAddr0  <= (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"14");   
-         --ethCoreIpAddr1  <= (3 => x"C0", 2 => x"A8", 1 => x"01", 0 => x"21");   
-       else
-         --ethCoreIpAddr0  <= (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"14");   
-         --ethCoreIpAddr1  <= (3 => x"C0", 2 => x"A8", 1 => x"02", 0 => x"21");      
-       end if;
-     end if;
-   end process;
   
-
+ 
   
-  u_dut  : entity work.tx_triggerbitsz_eth
+  
+  
+  u_dut  : entity work.register_deserializer_eth
     port map (
       globals => globals,
-      reg_out => u_dut_reg_out,
       -- Incoming data
       RxDataChannel => userRxDataChannels(1),
       rxDataValid   => userRxDataValids(1),
@@ -651,19 +429,17 @@ reg_merger:   entity work.register_merger
       TxDataValid     => userTxDataValids(1),
       txDataLast      => userTxDataLasts(1) ,
       TxDataReady     =>  userTxDataReadys(1),
-      
-      TARGET_TB => TARGET_TB,
       TXBus_m2s => TXBus_m2s,
       TXBus_s2m => TXBus_s2m
     );
 
 
   REG_DAC : 
-  for I in 0 to NumberOfACICs -1 generate
-    SCLK(I) <= TX_DAC_control_out(I).SCLK;     
+  for I in 0 to 9 generate
+    SCLK(I) <= TX_DAC_control_out.SCLK;     
     --SHOUT <= TX_DAC_control_out.
-    SIN(I)  <= TX_DAC_control_out(I).SIN;     
-    PCLK(I) <= TX_DAC_control_out(I).PCLK;
+    SIN(I)  <= TX_DAC_control_out.SIN;     
+    PCLK(I) <= TX_DAC_control_out.PCLK;
     
   end generate ;
   
